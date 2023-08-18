@@ -1,0 +1,292 @@
+---
+title: '"Survivor" (TV Show) Analysis: Who Earns the Jury Vote?'
+author: "Brianna Beitling"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r, echo=FALSE, message=FALSE}
+saspath <- "D:/SASHome/SASFoundation/9.4/sas.exe"
+sasopts <- "-nosplash -ls 75"
+
+knitr::opts_chunk$set(engine="sas", engine.path=saspath, 
+    engine.opts=sasopts, comment=NA, echo = FALSE)
+knitr::opts_chunk$set(engine="sashtml", engine.path=saspath, 
+        engine.opts=sasopts, comment=NA)
+require(SASmarkdown)
+sas_collectcode()
+```
+## I. Introduction
+
+### A. Study Design. 
+
+In 2000, "Survivor Fever" swept the nation as millions watched one of the first reality television shows unfold on their television screens. The commercials and advertisements preceding its inaugural episode led some to believe there might actually be some degree of brutality and danger to the situation- that perhaps even the contestants' lives were at stake- a la "Battle Royale" or "The Hunger Games". While that was, of course, inaccurate, the first season of Survivor did set itself up to become CBS's pride and joy as the viewers learned the proper way to play the game along with the sixteen Americans dropped on the beach in Borneo. Strategy developed early as two tribes of eight faced off in challenges for reward and for immunity from the Tribal Council vote that would end one person's shot at the million dollars and title of "sole survivor".
+
+Strategy, however, means little if a participant is able to reach the end of the show and not garner the favor of many of the contestants previously voted off, which is the criterion on which winning is hinged. This is best seen in the case of Russel Hantz, a contestant whose dirty tactics and lies propelled him to the end of the game twice in two consecutive seasons, only to face two bitter juries who refused to give him a majority of the votes (he earned two votes in season 19 and zero votes in season 20). This begs the question, then: what does it take to earn the jury's votes at that final tribal council? Are the factors largely out of the contestant's control, like their own age, career, etc., or does the way the contestant plays the game also have bearing?
+
+This study will investigate this very question by examining the relationship between the percentage of the jury vote received (calculated as votes cast for a contestant, out of the total jury votes available per season) and various other variables. Variables expected to be related to jury votes received are: **age**, age of each contestant in years during time of filming; **votesagainst**, number of votes cast against the contestant over the course of the game (in attempt to vote the person out, not including final jury votes FOR the contestant to win); **indimmunities**, the number of individual immunities (safety from tribal council vote-offs) earned through excellent challenge performance; **tc_pct**, tribal council percent, calculated as the number of "correct" votes made by the contestant (votes for the person who ultimately gets booted at that tribal council) out of the number of tribal councils attended by that contestant; **tc_score**, tribal council score, calculated as the number of "correct" votes made by the contestant out of the number of tribal councils total in the season; **idols**, the number of hidden immunity idols (whose purpose is also to immunize a contestant from votes, if played) found by the contestant (which may represent idols found alone or as a group within an alliance); **appstatus**, whether a contestant was an applicant to be on the show (1), a recruit (0), or recruited for applying to another show (0.5) (note: if the contestant had previously been on a season, they were treated as a recruit in each subsequent appearance since CBS recruited them to return); **collar**, whether the person has a white collar job (1), blue collar job (3), or a job that does not fit either category (referred to by the show itself as "no collar") (2); **season**, the season number in which the contestant participated-- this is not expected to have an effect, but is included initially as a main effect for the following interaction term; season_TCPct, the interaction term between season and tribal council percent, as explained previously. This interaction term is included because of a general trend observed from the initial seasons, where the jury tends to be more bitter and thus not give their final jury votes to the contestants primarily responsible for orchestrating their vote-offs, toward rewarding correct gameplay and stragegy in later seasons, tending to give jury votes more frequently to players who did shoulder that responsibility.
+
+Data was partially compiled from Jon Krause, "Survivor" analyst who has analyzed general trends in demographic data for multiple reality shows and who provided his data freely in a dropbox linked to from Rob Has a Podcast (http://robhasawebsite.com/rhappy-hour-survivor-big-brother-by-the-numbers/). The rest of the data was taken from various pages of the "Survivor Wiki" (http://survivor.wikia.com/wiki/Survivor:_Borneo through http://survivor.wikia.com/wiki/Survivor:_Millennials_vs._Gen_X) and appended onto the previous dataset. "Survivor" has aired 35 seasons to date (the 36th season is currently airing); this dataset includes contestant data from seasons 1-34.
+
+
+
+```{r, engine="sas", collectcode=TRUE}
+ 
+proc import out= survivor 
+            datafile= "C:\Users\Brianna\Documents\Stat 840\Survivor Dataset.csv" 
+            dbms=CSV REPLACE;
+     getnames=yes;
+     datarow=2; 
+run;
+
+data finaltribal;
+	set survivor;
+	if Final_Tribal = 1;
+	Season_TCPct = Season*TC_Pct;
+run;
+
+```
+### B. Aims. 
+The purpose of the study is to **investigate the relationship** between percent of the jury vote received by finalists on the television show "Survivor" and various factors related to contestant demographics and gameplay.
+
+### C. Statistical Model.
+A multiple linear regression model is considered. Let
+
+  \(Y_i = \) the percent of the jury vote earned by the \(i^{th}\) finalist,
+
+  \(X_{i1} =\) age in years of the \(i^{th}\) contestant, 
+
+  \(X_{i2} = \) season competed in by the \(i^{th}\) contestant,  
+  
+  \(X_{i3} =\) total votes in the season cast against the \(i^{th}\) contestant,  
+  
+  \(X_{i4} = \) individual immunities earned through immunity challenges by the \(i^{th}\) contestant,  
+  
+  \(X_{i5} =\) tribal council percent, calculated as number of votes cast by the \(i^{th}\) contestant for the person who is subsequently booted out at that tribal council (not including votes at final 3) divided by the number of tribal councils participated in by the \(i^{th}\) contestant,
+  
+  \(X_{i6} =\) tribal council score, calculated as number of votes cast by the \(i^{th}\) contestant for the person who is subsequently booted out at that tribal council (not including votes at final 3) divided by the number of tribal councils in the season (not including final 3 or final tribal councils),
+  
+  \(X_{i7} = \) idols found by the \(i^{th}\) contestant (not necessarily equivalent to idols played by that contestant, and idols may be found alone or as part of a group/alliance),
+  
+  \(X_{i8} = \) whether the \(i^{th}\) contestant was an applicant (1), or recruit (0) or hybrid (0) (applicant to another show, subsequently recruited to participate in survivor),
+  
+  \(X_{i9} = \) whether the \(i^{th}\) contestant was a recruit (1), applicant (0), or hybrid (0) (applicant to another show, subsequently recruited to participate in survivor),
+  
+  \(X_{i10} = \) "collar" job of the \(i^{th}\) contestant, where 1 = white collar, and 0 = "no" collar or blue collar,
+  
+  \(X_{i11} = \) "collar" job of the \(i^{th}\) contestant, where 1 = "no" collar, and 0 = white collar or blue collar,
+  
+  \(X_{i12} = \) interaction term between the tribal council percentage for the \(i^{th}\) contestant and the season on which the contestant participated.
+
+The **initial model** is given by
+
+\[Y_i = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + \beta_3X_{i3} + \beta_4X_{i4} + \beta_5X_{i5} + \beta_6X_{i6} + \beta_7X_{i7} + \beta_8X_{i8} + \beta_9X_{i9} + \beta_{10}X_{i10} + \beta_{11}X_{i11} + \beta_{12}X_{i12} + \varepsilon_i\]
+
+where \(\varepsilon_i \sim iidN(0,\sigma^2)\), \(i = 1, 2, . . . , 83\), and \(\beta_0, \beta_1, . . . , \beta_{12},\) and \(\sigma^2\) are the unknown model parameters.
+
+Eighty-four contestants in seasons 1 through 34 have participated in the final tribal council as a candidate for the million dollars. Of those eighty-four, eighty-three are included in all analysis that includes the variable "appstatus", due to missing data (it is unknown whether Missy Payne in season 29 was an applicant or recruit).
+
+Note that applicant status and collar are categorical variables each with 3 levels, so two parameters are added to the model for each. PROC GLM automatically treats one of the options (hybrid for applicant status and blue collar for collar) as the default, reflected in the model as a value of 0 for the two associated variable levels (applicant and recruit; and white collar and no collar, respectively). Thus, while in the data, appstatus of 0 = recruit, 0.5 = hybrid, and 1 = applicant, in the equation, recruits will have a 0 for \(X_{i8}\) and 1 for \(X_{i9}\), applicants will have a 1 for \(X_{i8}\) and 0 for \(X_{i9}\), and hybrids will have 0s for both values. Similarly, in the data collar of 1 = white collar, 2 = "no" collar, 3 = blue collar, but in the equation, white collar corresponds to a 1 for \(X_{i10}\) and 0 for \(X_{i11}\), "no" collar corresponds to a 0 for \(X_{i10}\) and 1 for \(X_{i11}\), and blue collar corresponds to a 0 for both values.   
+
+```{r, engine="sas", echo=TRUE}
+proc glm data = finaltribal;
+	class Appstatus Collar;
+	model Pct_Jury_Vote = Age Season VotesAgainst IndImmunities TC_Pct TC_Score Idols AppStatus Collar Season*TC_Pct /solution;
+run;
+quit;
+
+```
+
+## II. Preliminary Analyses.
+### A. Bivariate Associations.
+A scatterplot matrix indicates generally linear associations between the predictor variables and percent of jury vote received. Of course, the categorical variables do not look very linear in scatterplot form. Season and the interaction term utilizing season look less linear, but that is why an interaction term was created.
+```{r, engine="sashtml", echo=TRUE}
+proc sgscatter data = finaltribal;
+	matrix Pct_Jury_Vote Age Season VotesAgainst IndImmunities TC_Pct TC_Score Idols AppStatus Collar season_TCPct;
+run;
+
+```
+
+The Pearson correlation coeffecients for all pairwise associations are shown below. Most of the variables have a weak to moderate correlation with percent of jury vote received. It is evident already that some variables will likely not be utilized in the final model, but they will be used in variable selection regardless.
+```{r, engine="sas", echo=TRUE}
+proc corr data = finaltribal;
+	var Pct_Jury_Vote Age Season VotesAgainst IndImmunities TC_Pct TC_Score Idols AppStatus Collar season_TCPct;
+run;
+
+```
+
+### B. Screening of Covariates and Verification of Assumptions
+Based on automatic variable selection methods in combination with criterion-based statistics, the following variables were removed from the model: season, votesagainst, indimmunities, and tc_score. Residual plots, statistics such as Cook's D, and values of the residuals themselves confirmed no cause for concern with regard to outliers and points of high influence. Additionally, the remainder of the assumptions of the linear model (normality of resdiuals, homoscedasticity, linearity, and independence) were confirmed to apparently hold. Multicollinearity might otherwise pose minor issues in this model, but variables amongst variables most highly collinear with one another (such as tc_pct and tc_score), at least one was removed. The remaining variables only appear to have weak relationships at best. 
+
+### C. Final Model
+The **final model** is given by
+\[Y_i = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + \beta_3X_{i3} + \beta_4X_{i4} + \beta_5X_{i5} + \beta_6X_{i6} + \beta_7X_{i7} + \beta_8X_{i8} + \varepsilon_i\]
+
+where \(\varepsilon_i \sim iidN(0,\sigma^2)\), \(i = 1, 2, . . . , 83\), and \(\beta_0, \beta_1, . . . , \beta_8,\) and \(\sigma^2\) are the unknown model parameters.
+
+## III. Statistical Analysis.
+Relevant output for the fitted model, including ANOVA table, parameter estimates, and 95% confidence intervals for the parameters, is displayed below. The F value and associate p-value (4.77 and <.0001 respectively) confirm that at least one of the predictors is significantly related to percent of jury vote received. The \(R^2 = .340304\), meaning that approximately 34% of the variation in percent of jury vote received by finalists can be explained by the collective effect of the predictors in the model. While this is not a relatively high \(R^2\), when taking the amount of luck and variety associated with "Survivor" into account (including the fact that a person can win one season and do very poorly in another), it is easy to see that it would be impossible to account for all, or even a majority, of variation when creating a model for a reality show based upon people, relationship, and psychology.
+
+```{r, engine="sas", echo=TRUE}
+proc glm data = finaltribal;
+	class Appstatus Collar;
+	model Pct_Jury_Vote = Age TC_Pct Idols AppStatus Collar season*TC_Pct /solution clparm alpha = .05;
+run;
+quit;
+
+
+```
+
+### A. Utilizing the Model for Prediction
+To test the utility of the model in predicting voting outcomes for "Survivor" finalists, the three finalists from the previous season (not included in the full dataset) were tested. Outcomes were compared to actual values. As evidenced, below, the model for this season underestimated the percent of jury vote received for each of the three data points. It was predicted that Troyzan would receive -5.46% of the vote (technically impossible); he actually received 0%. Brad was predicted to receive 3.10% of the jury vote; he actually received 30%. Last, Sarah was predicted to receive 14.47% of the jury vote, but she actually received 70%. Other measures could possibly be taken in "better" fitting models to account for the fact that percentages within the same season should have summed to 100.00% and to eliminate any bias retained in the final model presented. However, while the values predicted were less than the actual values, the predicted values would have correctly pointed to the winner, as predicted values ascended accordingly with the actual values.
+```{r, engine="sas", echo=TRUE}
+proc import out= survpred 
+            datafile= "C:\Users\Brianna\Documents\Stat 840\Prediction Dataset.csv" 
+            dbms=CSV REPLACE;
+     getnames=yes;
+     datarow=2; 
+run;
+
+data survpredvals;
+	set survpred;
+	predictval = 144.7476841 - 1.0105315*Age -0.6562001*TC_Pct + 19.9941753*Idols + 2.8460366*Recruit + 18.8746603*Applicant -16.3696105*WhiteCollar -17.8531981*NoCollar-0.0133077*(TC_Pct*Season);
+	predvsactual = predictval - Pct_Jury_Vote;
+run;
+
+proc print data = survpredvals;
+	var Name Age Season TC_Pct Idols Pct_Jury_Vote AppStatus Collar predictval predvsactual;
+run;
+
+```
+
+## IV. Summary of Findings.
+
+1. There appears to be a negative relationship between age and percent of the jury vote received. Older contestants receive fewer of the votes available overall.
+
+2. There is a negative relationship between percent of "correct" votes at tribal councils (that is, votes for the contestant that ultimately gets booted) and percent of jury votes received. This is consistent with the idea of a "bitter jury" that permeated most of the early-middle seasons of "Survivor", where the jury did not reward finalists responsible for their own removal from the game, as a whole. This has changed some in recent years, which is why the interaction term (described in (6)) was included.
+
+3. There is a positive relationship between idols found and percent of jury vote received. Hidden immunity idols were not in the early seasons of "Survivor"; rather, they were first introduced in the middle seasons of the game. Contestants who found idols rarely had them fall into their laps; they were generally playing very aggressively, seeking out idols, and in many cases finding them even before a clue to their location was given. There are likely many reasons, then, why finding an idol is positively correlated with percent of the jury vote received, not all of which are directly described by the actual variable used here.
+
+4. With regard to whether a contestant is an applicant or a recruit, it appears that applicants are more likely to receive jury votes than recruits. Applicants are more likely familiar with the game, whereas recruits are frequently cast by "Survivor" producers because they will make good characters. Perhaps, then, this is a reflection of friendships made with the jury by applicants, their general capability for strategy in the game, or their perception as a more genuine player.
+
+5. Contestants with blue collar jobs are more likely to win than finalists in white collar or "no" collar jobs. Perhaps these contestants are seen as more relatable by the majority of the jury, or perhaps another reason entirely accounts for this relationship.
+
+6. There was generally a negative association between percent of jury votes received and the interaction term between tribal council percent and season. Looking at values in the dataset, it is apparent that the interaction is indeed significant in the hypothesized way-- that is, that finalists in earlier seasons receive less of the jury votes when their tribal council percentage is higher, whereas contestants in later seasons receive more of the jury votes (relative to previous seasons, at least) when their tribal council percentage is higher. This corresponds to a shifting attitude toward rewarding strategy and dominant play.
+
+Clearly, a lot of variation still exists in this model. It is difficult to account for every variable that is responsible for the percentage of the jury vote received by jury members, especially since jury members themselves have a large degree of variation, and frequently reward players for different reasons in different seasons. Seasons 19 and 20 saw juries so bitter at their treatment in the game by Russell Hantz that he received very few votes despite dominating strategically and finding many hidden immunity idols. On the other hand, Kim Spradlin dominated season 24 and was responsible for most of the jury members' oustings, but still easily won in the final tribal council 7-2. In season 15, Amanda Kimmel played a game easily on par with winner, Todd Herzog, but her botched arguments and inability to take responsibility for her actions at the final tribal annoyed jury members and potentially cost her the game. And finally, there are seasons like season 33 where revelations at the final tribal council reward sympathy points to the ultimate winner (Adam Klein revealed that his mother was dying) resulting in a 10-0-0 vote which would likely not have been quite so unanimous otherwise (runner-up Ken McNickle played a game which in any other season likely would have rewarded him with at least a portion of the jury vote).
+
+Overall, it is difficult to predict something as fickle as a "Survivor" jury's whims. However, this model does explain approximately 34% of the variation in jury vote, and given the nature of the game, that does offer some degree of value (such as the ability of the model to correctly predict the order of placement via predicted percentages received of the finalists in season 34).
+
+## V. Appendix
+### A. Diagnostics for Predictors
+The purpose of this section is to check predictors for outlier values. Boxplots created show some skewness, but overall no major problems with outliers.
+```{r, engine="sashtml", echo=TRUE}
+data finaltribal;
+set finaltribal;
+group = 1;
+run;
+
+proc boxplot data = finaltribal;
+plot Pct_Jury_Vote*group;
+plot Age*group;
+plot TC_Pct*group;
+plot Idols*group;
+plot AppStatus*group;
+plot Collar*group;
+plot season_TCPct*group;
+run;
+
+```
+
+### B. Screening of Predictors
+1. **Added variable plots** for each predictor are included below. The categorical variables (applicant and collar) do not look impressively linear, but that is unsurprising. The others, while not strongly linear, do show weak to moderate linearity. Overall, the plots indicate no need for transformations, and that the predictors do have value in the final model.
+```{r, engine="sashtml", echo=TRUE}
+proc reg data = finaltribal;
+model Pct_Jury_Vote = Age TC_Pct Idols Applicant Recruit BlueCollar WhiteCollar season_TCPct /partial;
+run;
+quit;
+
+```
+
+2. A scatterplot matrix and correlation matrix were created for the final predictors to assess for multicollinearity. Multicollinearity, or a high degree of association amongst predictor variables, can create a model that is not stable. These matrices, displayed below, show a moderate degree of association between the tribal council percent x season interaction term, and both idols and applicant status. All other variables have weak associations at most. The degree of potentiall muticollinearity presented by these findings does not pose great cause for concern.
+```{r, engine="sashtml", echo=TRUE}
+proc sgscatter data = finaltribal;
+	matrix Pct_Jury_Vote Age TC_Pct Idols AppStatus Collar season_TCPct;
+run;
+```
+
+```{r, engine="sas", echo=TRUE}
+proc corr data = finaltribal;
+	var Pct_Jury_Vote Age TC_Pct Idols AppStatus Collar season_TCPct;
+run;
+```
+
+3. Automatic variable selection was used to determine which model was best utilized as the final model. Many criteria were examined, and the model which seemed best according to the most criteria was used. The model which minimized AIC, minimized Mallow's \(C{p}\), and maximized \(R^2{adj}\) corresponds to the final model which was selected.
+```{r, engine="sashtml", echo=TRUE}
+ods graphics on;
+proc glmselect data = finaltribal plot = CriterionPanel;
+	class AppStatus Collar;
+	model Pct_Jury_Vote = Age Season VotesAgainst IndImmunities TC_Pct TC_Score Idols AppStatus Collar season*TC_Pct
+	/selection = stepwise(select = cp) stats = all;
+run;
+quit;
+ods graphics off;
+
+```
+
+4. No variables appeared to have concerns with multicollinearity above; this is confirmed by finding VIF values, none of which exceed the rule of thumb value of 10.
+
+5. The final model fitted model is displayed below, assuming no violations of model assumptions are found.
+```{r, engine="sas", echo=TRUE}
+proc glm data = finaltribal;
+	class Appstatus Collar;
+	model Pct_Jury_Vote = Age TC_Pct Idols AppStatus Collar season*TC_Pct /solution;
+run;
+quit;
+
+```
+
+### C. Residual Diagnostics
+Residuals were checked to ensure that no model assumptions were violated. 
+
+First, residual values were checked to ensure that no outliers were present. In the case of this model, only one outlier was found. Cook's D statistics were calculated for each residual to check for high levels of influence. This would only be a problem for any outliers found. No Cook's D values were concerning or merited further investigation.
+```{r, engine="sashtml", echo=TRUE}
+ods graphics on;
+proc glm data = finaltribal plots = (diagnostics residuals);
+	class Appstatus Collar;
+	model Pct_Jury_Vote = Age TC_Pct Idols AppStatus Collar season*TC_Pct;
+	output out=pred r=resid cookd=cooksd rstudent = rstud;
+run;
+quit;
+ods graphics off;
+
+proc print data = pred;
+	var Name rstud;
+	where abs(rstud) >= 3;
+run;
+
+proc print data = pred;
+	var Name cooksd;
+	where abs(cooksd) >= 1;
+run;
+
+```
+
+In addition, the predicted versus residual plot displayed above confirms many assumptions: it looks randomly distributed, with a mean of zero, no prominent variance problems as confirmed by no clear funneling of residual values, and no apparent issues with independence of error terms.
+
+Further, the Q-Q plot above supports normality. Normality is confirmed by the Shapiro-Wilk test below, with p-value of .1041, which is less than .05, and thus not sufficient to reject the assumption that the error terms are normally distributed.
+```{r, engine="sas", echo=TRUE}
+proc glm data = finaltribal noprint;
+	class Appstatus Collar;
+	model Pct_Jury_Vote = Age TC_Pct Idols AppStatus Collar season*TC_Pct /solution;
+	output out=pred r=resid cookd=cooksd rstudent = rstud;
+run;
+quit;
+
+proc univariate data = pred normal;
+	var resid;
+run;
+
+```
